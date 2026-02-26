@@ -1,0 +1,12 @@
+[[headers]]
+  for = "/*"
+  [headers.values]
+  Content-Security-Policy = """
+  default-src 'self';
+  connect-src 'self' https://fitlyfy.onrender.com;
+  img-src 'self' https://images.unsplash.com data:;
+  script-src 'self' https://checkout.razorpay.com;
+  frame-src 'self' https://www.youtube.com https://api.razorpay.com;
+  style-src 'self' 'unsafe-inline';
+  font-src 'self' data:;
+  """
