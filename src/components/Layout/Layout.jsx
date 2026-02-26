@@ -1,26 +1,37 @@
-import { Outlet, useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { Outlet, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import Header from './Header';
-import Footer from './Footer';
+import Header from "./Header";
+import Footer from "./Footer";
 
 // COMPLETELY SILENCE CONSOLE IN PRODUCTION
 const silenceConsole = () => {
-  if (typeof window === 'undefined') return;
-  
-  if (process.env.NODE_ENV === 'production') {
+  if (typeof window === "undefined") return;
+
+  if (process.env.NODE_ENV === "production") {
     // Complete silence in production
     console.log = () => {};
     console.warn = () => {};
     console.error = () => {};
     console.info = () => {};
     console.debug = () => {};
-    
+
     // Also silence third-party console methods
     if (window.console) {
       const noop = () => {};
-      const methods = ['log', 'warn', 'error', 'info', 'debug', 'table', 'trace', 'dir', 'group', 'groupEnd'];
-      methods.forEach(method => {
+      const methods = [
+        "log",
+        "warn",
+        "error",
+        "info",
+        "debug",
+        "table",
+        "trace",
+        "dir",
+        "group",
+        "groupEnd",
+      ];
+      methods.forEach((method) => {
         window.console[method] = noop;
       });
     }
@@ -28,14 +39,20 @@ const silenceConsole = () => {
     // Development mode - only show critical errors
     const originalError = console.error;
     console.error = (...args) => {
-      const message = args[0]?.toString() || '';
-      const criticalErrors = ['Error:', 'SecurityError', 'SyntaxError', 'TypeError', 'ReferenceError'];
-      
-      if (criticalErrors.some(err => message.includes(err))) {
+      const message = args[0]?.toString() || "";
+      const criticalErrors = [
+        "Error:",
+        "SecurityError",
+        "SyntaxError",
+        "TypeError",
+        "ReferenceError",
+      ];
+
+      if (criticalErrors.some((err) => message.includes(err))) {
         originalError.apply(console, args);
       }
     };
-    
+
     // Suppress common warnings
     console.warn = () => {};
   }
@@ -43,55 +60,48 @@ const silenceConsole = () => {
 
 // Block token exposure from third-party scripts
 const blockTokenExposure = () => {
-  if (typeof window === 'undefined') return;
-  
+  if (typeof window === "undefined") return;
+
   // Override URL parsing to hide tokens
   const originalURL = window.URL;
   window.URL = class SecureURL extends originalURL {
     constructor(url, base) {
-      const safeUrl = url?.toString()?.replace(
-        /(session_token|token|access_token|refresh_token|api_key|secret)=[^&]+/gi,
-        '$1=[REDACTED]'
-      );
+      const safeUrl = url
+        ?.toString()
+        ?.replace(
+          /(session_token|token|access_token|refresh_token|api_key|secret)=[^&]+/gi,
+          "$1=[REDACTED]",
+        );
       super(safeUrl || url, base);
     }
   };
-  
+
   // Override console.log for third-party scripts
   const originalLog = console.log;
   console.log = (...args) => {
-    const safeArgs = args.map(arg => {
-      if (typeof arg === 'string') {
+    const safeArgs = args.map((arg) => {
+      if (typeof arg === "string") {
         return arg.replace(
           /(session_token|token|access_token|refresh_token|api_key|secret|device_id|unified_session_id)=[^&]+/gi,
-          '$1=[REDACTED]'
+          "$1=[REDACTED]",
         );
       }
       return arg;
     });
-    
+
     // Only allow your application logs
-    if (safeArgs[0]?.includes('✅ Razorpay script loaded')) {
-      originalLog('✅ Payment gateway initialized');
+    if (safeArgs[0]?.includes("✅ Razorpay script loaded")) {
+      originalLog("✅ Payment gateway initialized");
       return;
     }
-    if (safeArgs[0]?.includes('📥 Membership plans API response')) {
-      originalLog('📥 API data loaded successfully');
+    if (safeArgs[0]?.includes("📥 Membership plans API response")) {
+      originalLog("📥 API data loaded successfully");
       return;
     }
   };
 };
 
 // Add security headers
-const addSecurityHeaders = () => {
-  if (typeof window === 'undefined' || process.env.NODE_ENV !== 'production') return;
-  
-  // This would be done server-side, but we can add meta tags
-  const meta = document.createElement('meta');
-  meta.httpEquiv = 'Content-Security-Policy';
-  meta.content = "default-src 'self'; script-src 'self' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline';";
-  document.head.appendChild(meta);
-};
 
 const Layout = () => {
   const location = useLocation();
@@ -103,32 +113,34 @@ const Layout = () => {
   useEffect(() => {
     silenceConsole();
     blockTokenExposure();
-    addSecurityHeaders();
-    
+
     // Verify page is served over HTTPS in production
-    if (process.env.NODE_ENV === 'production' && window.location.protocol !== 'https:') {
-      console.error('INSECURE CONNECTION: Site should be served over HTTPS');
+    if (
+      process.env.NODE_ENV === "production" &&
+      window.location.protocol !== "https:"
+    ) {
+      console.error("INSECURE CONNECTION: Site should be served over HTTPS");
       setIsSecure(false);
     }
-    
+
     // Check for security vulnerabilities
     const checkSecurity = () => {
       // Check if sensitive data is in localStorage
-      const sensitiveKeys = ['token', 'password', 'secret'];
-      sensitiveKeys.forEach(key => {
+      const sensitiveKeys = ["token", "password", "secret"];
+      sensitiveKeys.forEach((key) => {
         if (localStorage.getItem(key)) {
           console.warn(`Security warning: ${key} found in localStorage`);
         }
       });
-      
+
       // Check for eval usage (security risk)
-      if (window.eval && window.eval.toString().includes('[native code]')) {
-        console.warn('Security: eval() is enabled');
+      if (window.eval && window.eval.toString().includes("[native code]")) {
+        console.warn("Security: eval() is enabled");
       }
     };
-    
+
     checkSecurity();
-    
+
     // Cleanup
     return () => {
       // Remove any global event listeners
@@ -139,8 +151,8 @@ const Layout = () => {
   // Handle scroll
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   // Loading state
@@ -166,7 +178,7 @@ const Layout = () => {
   }
 
   // Security warning banner (only in development with issues)
-  if (!isSecure && process.env.NODE_ENV === 'development') {
+  if (!isSecure && process.env.NODE_ENV === "development") {
     return (
       <div className="min-h-screen bg-gradient-to-b from-red-950/20 to-gray-900 p-4">
         <div className="max-w-4xl mx-auto mt-10">
@@ -187,7 +199,10 @@ const Layout = () => {
                 <li>Device IDs</li>
                 <li>Authentication data</li>
               </ul>
-              <p className="pt-3">This is being fixed automatically. The production build will be secure.</p>
+              <p className="pt-3">
+                This is being fixed automatically. The production build will be
+                secure.
+              </p>
             </div>
           </div>
           <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
@@ -195,7 +210,7 @@ const Layout = () => {
             <main className="mt-6">
               <Outlet />
             </main>
-            {(!user || user?.role !== 'admin') && <Footer />}
+            {(!user || user?.role !== "admin") && <Footer />}
           </div>
         </div>
       </div>
@@ -205,7 +220,7 @@ const Layout = () => {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-950 to-gray-900">
       {/* Security overlay in development */}
-      {process.env.NODE_ENV === 'development' && (
+      {process.env.NODE_ENV === "development" && (
         <div className="fixed top-4 right-4 z-50">
           <div className="px-3 py-1.5 bg-emerald-500/20 text-emerald-400 text-xs font-medium rounded-lg border border-emerald-500/30 backdrop-blur-sm flex items-center space-x-2">
             <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
@@ -213,12 +228,12 @@ const Layout = () => {
           </div>
         </div>
       )}
-      
+
       <Header user={user} scrolled={scrolled} />
       <main className="flex-1">
         <Outlet />
       </main>
-      {(!user || user?.role !== 'admin') && <Footer />}
+      {(!user || user?.role !== "admin") && <Footer />}
     </div>
   );
 };
